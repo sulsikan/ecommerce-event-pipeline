@@ -1,56 +1,56 @@
-# Review
+# 리뷰
 
-## Purpose
+## 목적
 
-Review all pipeline design artifacts for consistency, completeness, operational reliability, and PR readiness.
+모든 파이프라인 설계 산출물을 일관성, 완전성, 운영 신뢰성, PR 준비 상태 기준으로 검토한다.
 
-## When to Use
+## 사용 시점
 
-Use this skill before opening a PR, before asking for commit approval, or after changing schema, replay, Kafka, Spark, quality, or monitoring documents.
+PR 생성 전, 커밋 승인 요청 전, 또는 스키마, 재생, Kafka, Spark, 품질, 모니터링 문서를 변경한 뒤 사용한다.
 
-## Required Inputs
+## 필수 입력
 
 - `AGENTS.md`
-- All documents under `docs/data-pipeline/`
-- Skill docs under `skills/`
-- Validation script output.
-- Active execution plan.
+- `docs/data-pipeline/` 하위 모든 문서
+- `skills/` 하위 Skill 문서
+- 검증 스크립트 실행 결과
+- 활성 실행 계획
 
-## Step-by-Step Procedure
+## 절차
 
-1. Check that agent outputs exist and match their responsibilities.
-2. Compare field names across schema, Kafka, Spark, quality rules, and monitoring metrics.
-3. Confirm that `event_id`, `event_time`, `ingested_at`, `event_date_kst`, and `user_id` semantics are consistent.
-4. Confirm that replay failure scenarios map to quality rules and monitoring alerts.
-5. Confirm that Kafka DLQ and Spark quarantine behavior are aligned.
-6. Confirm that Gold tables satisfy order monitoring, conversion, and anomaly goals.
-7. Run validation scripts.
-8. Update the review checklist with findings.
-9. Summarize changed files.
-10. Ask for commit approval only after self review.
+1. 에이전트 산출물이 존재하고 책임과 일치하는지 확인한다.
+2. 스키마, Kafka, Spark, 품질 규칙, 모니터링 지표의 필드명을 비교한다.
+3. `event_id`, `event_time`, `ingested_at`, `event_date_kst`, `user_id` 의미가 일관되는지 확인한다.
+4. replay 장애 시나리오가 품질 규칙과 모니터링 알림으로 이어지는지 확인한다.
+5. Kafka DLQ와 Spark quarantine 동작이 맞는지 확인한다.
+6. Gold 테이블이 주문 모니터링, 전환율, 이상 탐지 목표를 만족하는지 확인한다.
+7. 검증 스크립트를 실행한다.
+8. 리뷰 체크리스트에 발견 사항을 기록한다.
+9. 변경 파일을 요약한다.
+10. 자체 리뷰 후에만 커밋 승인을 요청한다.
 
-## Output Artifacts
+## 산출물
 
 - `docs/data-pipeline/review-checklist.md`
-- Review notes in the execution plan.
-- Validation command results.
+- 실행 계획의 리뷰 메모
+- 검증 명령 결과
 
-## Validation Checklist
+## 검증 체크리스트
 
-- No unresolved contradiction exists between pipeline documents.
-- Required validation scripts pass.
-- PR checklist has owners and status.
-- Git approval gates are preserved.
-- Remaining risks are documented.
+- 파이프라인 문서 사이에 해결되지 않은 모순이 없다.
+- 필수 검증 스크립트가 통과한다.
+- PR 체크리스트에 owner와 status가 있다.
+- Gitflow와 승인 게이트가 보존된다.
+- 남은 위험이 문서화되어 있다.
 
-## Anti-Patterns
+## 안티패턴
 
-- Reviewing each document in isolation only.
-- Treating validation script success as a substitute for design review.
-- Asking for commit approval without changed-file summary.
-- Merging immediately after commit approval.
+- 각 문서를 독립적으로만 리뷰한다.
+- 검증 스크립트 성공을 설계 리뷰의 대체재로 본다.
+- 변경 파일 요약 없이 커밋 승인을 요청한다.
+- 커밋 승인 직후 별도 승인 없이 머지한다.
 
-## Example Prompt
+## 예시 프롬프트
 
-`PR 전에 전체 데이터 파이프라인 하네스를 리뷰하고 불일치, 누락된 테스트, Git 승인 절차 위반 여부를 확인해줘.`
+`PR 전에 전체 데이터 파이프라인 하네스를 리뷰하고 불일치, 누락된 테스트, Gitflow 위반 여부를 확인해줘.`
 

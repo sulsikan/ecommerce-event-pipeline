@@ -1,55 +1,57 @@
-# Data Pipeline Roadmap
+# 데이터 파이프라인 로드맵
 
-## Phase 1: Harness and Design
+## 1단계: 하네스와 설계
 
-- Create agent role definitions.
-- Create skill documents.
-- Create architecture, schema, replay, Kafka, Spark, quality, monitoring, and review documents.
-- Create validation scripts.
-- Create execution plan template.
-- Run harness validation.
+- 에이전트 역할 정의를 만든다.
+- Skill 문서를 만든다.
+- 아키텍처, 스키마, 재생, Kafka, Spark, 품질, 모니터링, 리뷰 문서를 만든다.
+- 검증 스크립트를 만든다.
+- 실행 계획 템플릿을 만든다.
+- 하네스 검증을 실행한다.
 
-## Phase 2: Local Replay Prototype
+## 2단계: 로컬 재생 프로토타입
 
-- Add CSV fixture discovery.
-- Implement event replay producer.
-- Generate deterministic `event_id`.
-- Add configurable replay speed.
-- Add fault injection scenarios.
+- CSV fixture 탐색을 추가한다.
+- 이벤트 재생 Producer를 구현한다.
+- 결정적 `event_id`를 생성한다.
+- 설정 가능한 재생 속도를 추가한다.
+- 장애 주입 시나리오를 추가한다.
 
-## Phase 3: Kafka Streaming Foundation
+## 3단계: Kafka 스트리밍 기반
 
-- Provision local Kafka environment.
-- Create raw, retry, and DLQ topics.
-- Add producer schema validation.
-- Add consumer group and offset recovery tests.
+- 로컬 Kafka 환경을 구성한다.
+- Raw, Retry, DLQ Topic을 만든다.
+- Producer schema validation을 추가한다.
+- Consumer Group과 Offset 복구 테스트를 추가한다.
 
-## Phase 4: Spark Processing
+## 4단계: Spark 처리
 
-- Implement Bronze ingestion.
-- Implement Silver validation, normalization, watermarking, and deduplication.
-- Implement Gold aggregates for order volume, category counts, funnel metrics, and anomaly features.
-- Add checkpoint and replay recovery tests.
+- Bronze 수집을 구현한다.
+- Silver 검증, 정규화, watermark, deduplication을 구현한다.
+- 주문량, 카테고리 count, funnel 지표, anomaly feature용 Gold 집계를 구현한다.
+- Checkpoint와 replay 복구 테스트를 추가한다.
 
-## Phase 5: Quality and Observability
+## 5단계: 품질과 관측성
 
-- Implement data quality checks.
-- Add quarantine and DLQ triage flow.
-- Add metrics and structured logs.
-- Add Grafana dashboards and alert rules.
+- 데이터 품질 검사를 구현한다.
+- Quarantine과 DLQ triage 흐름을 추가한다.
+- 메트릭과 구조화 로그를 추가한다.
+- Grafana 대시보드와 알림 룰을 추가한다.
 
-## Phase 6: Review and Hardening
+## 6단계: 리뷰와 강화
 
-- Run Review Agent consistency checks.
-- Run load and replay tests.
-- Document operational runbooks.
-- Prepare PR checklist.
+- Review Agent 일관성 검토를 실행한다.
+- Load test와 replay test를 실행한다.
+- 운영 runbook을 문서화한다.
+- PR 체크리스트를 준비한다.
 
-## Git Workflow Milestones
+## Gitflow 마일스톤
 
-- Work on `feature/*` branches only.
-- Summarize changed files after each implementation slice.
-- Perform self review before commit approval.
-- Ask `커밋을 진행할까요?` before committing.
-- Ask `main으로 merge할까요?` before merging.
+- `main` 아래에 `develop` 브랜치를 둔다.
+- 기능 작업은 `feature/*` 브랜치에서 수행한다.
+- 기능 브랜치는 `develop`으로 머지한다.
+- 각 작업 단위 완료 후 변경 파일을 요약한다.
+- 커밋 승인 전 자체 리뷰를 수행한다.
+- 커밋 전 `커밋을 진행할까요?`라고 질문한다.
+- 머지 전 대상 브랜치를 명시하고 승인받는다.
 

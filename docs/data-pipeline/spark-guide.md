@@ -1,73 +1,73 @@
-# Spark Guide
+# Spark 가이드
 
-## Processing Model
+## 처리 모델
 
-Use Spark Structured Streaming for event-time processing from Kafka into Bronze, Silver, and Gold layers.
+Kafka에서 Bronze, Silver, Gold 계층으로 이어지는 event-time 처리는 Spark Structured Streaming을 사용한다.
 
-## Bronze Layer
+## Bronze 계층
 
-Bronze stores raw ingestion records:
+Bronze는 raw ingestion record를 저장한다.
 
-- Kafka topic, partition, offset, key, timestamp.
-- Raw payload.
-- Parse status.
-- Ingestion timestamp.
-- `event_date_kst` when parseable.
+- Kafka topic, partition, offset, key, timestamp
+- Raw payload
+- Parse status
+- Ingestion timestamp
+- 파싱 가능 시 `event_date_kst`
 
-Failure behavior:
+실패 처리:
 
-- Payload parse failures are written to quarantine or DLQ.
-- Kafka offsets are committed only after durable write.
+- Payload parse failure는 quarantine 또는 DLQ로 보낸다.
+- Kafka offset은 durable write 이후에만 commit한다.
 
-## Silver Layer
+## Silver 계층
 
-Silver stores validated canonical events:
+Silver는 검증된 표준 이벤트를 저장한다.
 
-- Apply schema validation.
-- Normalize timestamp fields.
-- Generate KST partition fields.
-- Deduplicate by `event_id`.
-- Apply watermark based on `event_time`.
-- Preserve quality status fields for warnings.
+- Schema validation 적용
+- Timestamp field 정규화
+- KST partition field 생성
+- `event_id` 기준 deduplication
+- `event_time` 기준 watermark 적용
+- Warning용 quality status field 보존
 
-Recommended defaults:
+권장 기본값:
 
-- Watermark: start with `30 minutes`, adjust after profiling replay disorder.
-- Deduplication key: `event_id`.
-- Partition: `event_date_kst`.
-- Checkpoint: one checkpoint directory per query.
+- Watermark: 우선 `30 minutes`, replay disorder profiling 후 조정
+- Deduplication key: `event_id`
+- Partition: `event_date_kst`
+- Checkpoint: query별 독립 checkpoint directory
 
-## Gold Layer
+## Gold 계층
 
-Gold tables support analysis goals:
+Gold table은 분석 목표를 지원한다.
 
-| Gold Table | Purpose | Window |
+| Gold Table | 목적 | Window |
 | --- | --- | --- |
-| `gold_order_volume_hourly` | Purchases by hour | 1 hour |
-| `gold_order_volume_by_category` | Purchases by category and hour | 1 hour |
-| `gold_conversion_funnel_hourly` | `view -> cart -> purchase` conversion | 1 hour |
-| `gold_user_purchase_burst_features` | User purchase burst features | 5 minutes, 1 hour |
-| `gold_duplicate_event_summary` | Duplicate event metrics | 5 minutes |
+| `gold_order_volume_hourly` | 시간대별 purchase 수 | 1시간 |
+| `gold_order_volume_by_category` | 카테고리와 시간대별 purchase 수 | 1시간 |
+| `gold_conversion_funnel_hourly` | `view -> cart -> purchase` 전환율 | 1시간 |
+| `gold_user_purchase_burst_features` | 사용자 구매 폭증 feature | 5분, 1시간 |
+| `gold_duplicate_event_summary` | 중복 이벤트 지표 | 5분 |
 
-## KST Partitioning
+## KST 파티셔닝
 
-Source `event_time` is UTC. Convert it to `event_time_kst`, then derive:
+원천 `event_time`은 UTC다. 이를 `event_time_kst`로 변환한 뒤 다음 필드를 만든다.
 
 - `event_date_kst`
 - `event_hour_kst`
 
-All storage partitions and dashboard groupings that refer to business day or business hour should use KST fields.
+비즈니스 날짜 또는 시간대 기준 저장 partition과 dashboard grouping은 KST 필드를 사용한다.
 
-## Checkpointing
+## Checkpoint
 
-- Each streaming query has a dedicated checkpoint location.
-- Do not reuse checkpoint directories across query names.
-- Include query name and layer in checkpoint path.
-- Document checkpoint reset procedure before running destructive replay tests.
+- 각 Streaming query는 독립 checkpoint 위치를 가진다.
+- 서로 다른 query가 checkpoint directory를 공유하지 않는다.
+- checkpoint path에는 query name과 layer를 포함한다.
+- 파괴적인 replay test 전 checkpoint reset 절차를 문서화한다.
 
-## Recovery
+## 복구
 
-- Reprocessing raw events must be possible from Kafka retention or Bronze storage.
-- Late events beyond watermark are tracked by quality metrics.
-- DLQ records can be triaged and replayed into retry or raw topics after correction.
+- Raw 이벤트 재처리는 Kafka retention 또는 Bronze storage에서 가능해야 한다.
+- Watermark를 초과한 late event는 품질 metric으로 추적한다.
+- DLQ record는 triage 후 correction을 거쳐 retry 또는 raw topic으로 replay할 수 있다.
 

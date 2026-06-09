@@ -1,35 +1,35 @@
-# Data Pipeline Design
+# 데이터 파이프라인 설계
 
-## Purpose
+## 목적
 
-Coordinate the end-to-end design of the real-time e-commerce behavior data pipeline harness, from schema design through PR readiness review.
+스키마 설계부터 PR 준비 검토까지 이커머스 행동 데이터 실시간 파이프라인 하네스의 전체 설계를 조율한다.
 
-## When to Use
+## 사용 시점
 
-Use this skill when planning or reviewing the full pipeline across schema, event replay, Kafka, Spark Structured Streaming, data quality, monitoring, and execution planning.
+스키마, 이벤트 재생, Kafka, Spark Structured Streaming, 데이터 품질, 모니터링, 실행 계획을 함께 설계하거나 검토할 때 사용한다.
 
-## Required Inputs
+## 필수 입력
 
-- Project goal and analysis objectives.
-- Kaggle CSV source assumptions.
-- Target runtime stack decisions, if already known.
-- Existing docs under `docs/data-pipeline/`.
-- Existing execution plan under `exec-plans/`.
+- 프로젝트 목표와 분석 요구사항
+- Kaggle CSV 원천 데이터 가정
+- 이미 결정된 런타임 스택
+- `docs/data-pipeline/` 하위 문서
+- `exec-plans/` 하위 실행 계획
 
-## Step-by-Step Procedure
+## 절차
 
-1. Read `AGENTS.md` for role boundaries and Git rules.
-2. Run Schema Designer Agent to draft canonical event and storage schemas.
-3. Run Event Replay Agent to define CSV replay semantics and failure scenarios.
-4. Run Kafka Streaming Agent to define topic, partition, consumer group, offset, DLQ, and retry strategy.
-5. Run Spark Processing Agent to define Bronze, Silver, Gold transformations.
-6. Run Data Quality Agent to define validation rules and failure handling.
-7. Run Monitoring Agent to define metrics, logs, alerts, and dashboards.
-8. Run Review Agent to check consistency across all artifacts.
-9. Execute validation scripts.
-10. Update the execution plan and PR checklist.
+1. `AGENTS.md`에서 역할 경계와 Git 규칙을 확인한다.
+2. Schema Designer Agent로 표준 이벤트와 저장 계층 스키마를 작성한다.
+3. Event Replay Agent로 CSV 재생 의미와 장애 주입 시나리오를 정의한다.
+4. Kafka Streaming Agent로 Topic, Partition, Consumer Group, Offset, Retry, DLQ를 정의한다.
+5. Spark Processing Agent로 Bronze, Silver, Gold 변환을 정의한다.
+6. Data Quality Agent로 검증 규칙과 실패 처리를 정의한다.
+7. Monitoring Agent로 로그, 메트릭, 알림, 대시보드를 정의한다.
+8. Review Agent로 전체 산출물의 일관성을 점검한다.
+9. 검증 스크립트를 실행한다.
+10. 실행 계획과 PR 체크리스트를 업데이트한다.
 
-## Output Artifacts
+## 산출물
 
 - `docs/data-pipeline/architecture.md`
 - `docs/data-pipeline/roadmap.md`
@@ -42,22 +42,22 @@ Use this skill when planning or reviewing the full pipeline across schema, event
 - `docs/data-pipeline/review-checklist.md`
 - `exec-plans/templates/data-pipeline-exec-plan.md`
 
-## Validation Checklist
+## 검증 체크리스트
 
-- Each agent has a named owner, input, output, and validation step.
-- Field names are consistent across schema, Kafka messages, Spark outputs, quality checks, and metrics.
-- KST partitioning is consistently documented.
-- DLQ, retry, watermark, checkpoint, and deduplication policies are documented.
-- Git rules are included and followed.
+- 각 에이전트에 역할, 입력, 출력, 검증 단계가 있다.
+- 필드명이 스키마, Kafka 메시지, Spark 출력, 품질 규칙, 메트릭에서 일관된다.
+- KST 파티셔닝 정책이 일관되게 문서화되어 있다.
+- DLQ, Retry, Watermark, Checkpoint, Deduplication 정책이 문서화되어 있다.
+- Gitflow와 승인 규칙이 포함되어 있다.
 
-## Anti-Patterns
+## 안티패턴
 
-- Designing analytics without defining data reliability contracts.
-- Changing schema fields in one document without updating Kafka, Spark, quality, and monitoring docs.
-- Treating duplicate, delayed, or missing events as edge cases with no test scenario.
-- Committing or merging before user approval.
+- 데이터 신뢰성 계약 없이 분석 지표부터 설계한다.
+- 한 문서에서 스키마 필드를 바꾸고 Kafka, Spark, 품질, 모니터링 문서를 갱신하지 않는다.
+- 중복, 지연, 누락 이벤트를 테스트 시나리오 없이 예외 상황으로만 둔다.
+- 사용자 승인 없이 커밋하거나 머지한다.
 
-## Example Prompt
+## 예시 프롬프트
 
-`데이터 파이프라인 설계를 전체 검토하고, 스키마/이벤트 재생/Kafka/Spark/품질/모니터링 문서의 불일치를 찾아줘.`
+`데이터 파이프라인 설계를 전체 검토하고 스키마, 이벤트 재생, Kafka, Spark, 품질, 모니터링 문서의 불일치를 찾아줘.`
 

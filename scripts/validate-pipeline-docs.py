@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the pipeline harness file structure and required headings."""
+"""파이프라인 하네스 파일 구조와 필수 제목을 검증한다."""
 
 from pathlib import Path
 import sys
@@ -35,14 +35,14 @@ REQUIRED_FILES = [
 ]
 
 SKILL_HEADINGS = [
-    "## Purpose",
-    "## When to Use",
-    "## Required Inputs",
-    "## Step-by-Step Procedure",
-    "## Output Artifacts",
-    "## Validation Checklist",
-    "## Anti-Patterns",
-    "## Example Prompt",
+    "## 목적",
+    "## 사용 시점",
+    "## 필수 입력",
+    "## 절차",
+    "## 산출물",
+    "## 검증 체크리스트",
+    "## 안티패턴",
+    "## 예시 프롬프트",
 ]
 
 AGENT_NAMES = [
@@ -66,7 +66,7 @@ def main() -> int:
     for relative in REQUIRED_FILES:
         path = ROOT / relative
         if not path.exists():
-            failures.append(f"missing file: {relative}")
+            failures.append(f"파일 누락: {relative}")
 
     skill_files = [
         "skills/data-pipeline-design.md",
@@ -87,28 +87,27 @@ def main() -> int:
         text = read_text(path)
         for heading in SKILL_HEADINGS:
             if heading not in text:
-                failures.append(f"{relative}: missing heading {heading}")
+                failures.append(f"{relative}: 제목 누락 {heading}")
 
     agents_path = ROOT / "AGENTS.md"
     if agents_path.exists():
         agents_text = read_text(agents_path)
         for agent in AGENT_NAMES:
             if agent not in agents_text:
-                failures.append(f"AGENTS.md: missing {agent}")
-        for rule in ["main", "feature/*", "커밋을 진행할까요?", "main으로 merge할까요?"]:
+                failures.append(f"AGENTS.md: 에이전트 누락 {agent}")
+        for rule in ["main", "develop", "feature/*", "커밋을 진행할까요?"]:
             if rule not in agents_text:
-                failures.append(f"AGENTS.md: missing Git rule token {rule}")
+                failures.append(f"AGENTS.md: Git 규칙 토큰 누락 {rule}")
 
     if failures:
-        print("Pipeline docs validation failed:")
+        print("파이프라인 문서 검증 실패:")
         for failure in failures:
             print(f"- {failure}")
         return 1
 
-    print("Pipeline docs validation passed.")
+    print("파이프라인 문서 검증 통과.")
     return 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
-

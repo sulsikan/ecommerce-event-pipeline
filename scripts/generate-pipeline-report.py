@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a lightweight Markdown report for the pipeline harness."""
+"""파이프라인 하네스의 가벼운 Markdown 리포트를 생성한다."""
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,31 +33,31 @@ def count_checkboxes(text: str) -> tuple[int, int]:
 def build_report() -> str:
     generated_at = datetime.now(timezone.utc).isoformat()
     lines = [
-        "# Pipeline Harness Report",
+        "# 파이프라인 하네스 리포트",
         "",
-        f"- Generated at: `{generated_at}`",
-        f"- Repository: `{ROOT.name}`",
+        f"- 생성 시각: `{generated_at}`",
+        f"- 리포지터리: `{ROOT.name}`",
         "",
-        "## Artifact Inventory",
+        "## 산출물 목록",
         "",
-        "| Artifact | Status | Checklist Progress |",
+        "| 산출물 | 상태 | 체크리스트 진행률 |",
         "| --- | --- | --- |",
     ]
 
     for relative in REPORT_FILES:
         path = ROOT / relative
         if not path.exists():
-            lines.append(f"| `{relative}` | missing | n/a |")
+            lines.append(f"| `{relative}` | 없음 | 해당 없음 |")
             continue
         text = path.read_text(encoding="utf-8")
         total, done = count_checkboxes(text)
-        progress = "n/a" if total == 0 else f"{done}/{total}"
-        lines.append(f"| `{relative}` | present | {progress} |")
+        progress = "해당 없음" if total == 0 else f"{done}/{total}"
+        lines.append(f"| `{relative}` | 있음 | {progress} |")
 
     lines.extend(
         [
             "",
-            "## Required Validation Commands",
+            "## 필수 검증 명령",
             "",
             "```bash",
             "python3 scripts/validate-schema.py",
@@ -66,10 +66,10 @@ def build_report() -> str:
             "python3 scripts/generate-pipeline-report.py",
             "```",
             "",
-            "## Commit Gate",
+            "## 커밋 게이트",
             "",
-            "Do not commit until the user approves after `커밋을 진행할까요?`.",
-            "Do not merge until the user approves after `main으로 merge할까요?`.",
+            "`커밋을 진행할까요?` 이후 사용자 승인을 받기 전까지 커밋하지 않는다.",
+            "대상 브랜치를 명시하고 사용자 승인을 받기 전까지 머지하지 않는다.",
         ]
     )
 
@@ -78,7 +78,7 @@ def build_report() -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", help="Optional path to write the report.")
+    parser.add_argument("--output", help="리포트를 저장할 선택 경로")
     args = parser.parse_args()
 
     report = build_report()
@@ -88,7 +88,7 @@ def main() -> int:
             output_path = ROOT / output_path
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(report, encoding="utf-8")
-        print(f"Wrote {output_path.relative_to(ROOT)}")
+        print(f"{output_path.relative_to(ROOT)} 파일을 작성했습니다.")
     else:
         sys.stdout.write(report)
 
@@ -97,4 +97,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
