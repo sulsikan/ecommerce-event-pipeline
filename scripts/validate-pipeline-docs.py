@@ -10,7 +10,6 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = [
     "AGENTS.md",
     "skills/data-pipeline-design.md",
-    "skills/data-pipeline-design/SKILL.md",
     "skills/schema-design.md",
     "skills/event-replay.md",
     "skills/kafka-streaming.md",
@@ -69,9 +68,8 @@ def main() -> int:
             failures.append(f"파일 누락: {relative}")
 
     skill_files = [
-        "skills/data-pipeline-design.md",
-        "skills/data-pipeline-design/SKILL.md",
-        "skills/schema-design.md",
+    "skills/data-pipeline-design.md",
+    "skills/schema-design.md",
         "skills/event-replay.md",
         "skills/kafka-streaming.md",
         "skills/spark-processing.md",
