@@ -1,0 +1,76 @@
+{
+  "title": "Ecommerce Event Pipeline",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["ecommerce", "streaming", "data-quality"],
+  "panels": [
+    {
+      "title": "Pipeline Events In",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(pipeline_events_in_total)",
+          "legendFormat": "bronze input"
+        }
+      ],
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4}
+    },
+    {
+      "title": "Pipeline Events Out",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(pipeline_events_out_total)",
+          "legendFormat": "silver output"
+        }
+      ],
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4}
+    },
+    {
+      "title": "Data Quality Failures",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (rule_id) ({__name__=~\"dq_.*_total\"})",
+          "legendFormat": "{{rule_id}}"
+        }
+      ],
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8}
+    },
+    {
+      "title": "Duplicate Event Rate",
+      "type": "gauge",
+      "targets": [
+        {
+          "expr": "max(dq_duplicate_event_rate)",
+          "legendFormat": "duplicate rate"
+        }
+      ],
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 6}
+    },
+    {
+      "title": "Business Purchase Count",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(business_purchase_count)",
+          "legendFormat": "purchase count"
+        }
+      ],
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 6}
+    },
+    {
+      "title": "View To Purchase Conversion",
+      "type": "gauge",
+      "targets": [
+        {
+          "expr": "avg(business_conversion_rate)",
+          "legendFormat": "conversion"
+        }
+      ],
+      "gridPos": {"x": 12, "y": 6, "w": 12, "h": 6}
+    }
+  ]
+}

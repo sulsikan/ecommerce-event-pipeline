@@ -185,11 +185,11 @@ python3 scripts/generate-pipeline-report.py
 
 - Data quality validation jobs 또는 rules
 - Quarantine table
-- DLQ triage 절차
 - Metrics exporter 또는 metric event stream
 - Grafana dashboard
 - Alert rules
 - 운영 runbook
+- Phase 5 monitoring report
 
 완료 기준:
 
@@ -197,6 +197,7 @@ python3 scripts/generate-pipeline-report.py
 - Kafka Consumer Lag, DLQ count, processing latency, duplicate rate, late event count가 dashboard에 표시된다.
 - purchase spike와 user purchase burst alert가 테스트 scenario에서 발생한다.
 - alert마다 owner와 runbook이 있다.
+- 로컬 smoke test에서 `rule_results`, `quarantine_events`, `metric_events`, `phase5-report.json`이 생성된다.
 
 검증 방법:
 
@@ -204,6 +205,7 @@ python3 scripts/generate-pipeline-report.py
 - DLQ와 quarantine record가 원본 payload와 rule metadata를 포함하는지 확인한다.
 - Grafana dashboard가 event-time metric과 processing-time metric을 구분하는지 확인한다.
 - alert threshold를 load test baseline 기준으로 조정한다.
+- `scripts/run-data-quality-checks.py`와 `scripts/generate-monitoring-report.py`를 Spark 컨테이너에서 실행한다.
 
 ## 예상 산출물 요약
 
