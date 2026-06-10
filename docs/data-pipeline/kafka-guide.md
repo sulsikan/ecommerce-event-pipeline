@@ -6,7 +6,7 @@ Kafka 계층은 replay producer와 Spark processing 사이에서 내구성 있�
 
 ## Topic 이름 규칙
 
-`<domain>.<entity>.<stage>.<version>` 형식을 사용한다.
+운영 장기 설계는 `<domain>.<entity>.<stage>.<version>` 형식을 사용한다. Phase 2 로컬 ingestion 구현은 간결한 개발용 계약으로 `ecommerce.raw-events`를 사용한다.
 
 결정 이유:
 
@@ -18,7 +18,8 @@ Kafka 계층은 replay producer와 Spark processing 사이에서 내구성 있�
 
 | Topic | 목적 | Key | Value | Retention | 결정 이유 |
 | --- | --- | --- | --- | --- | --- |
-| `ecommerce.events.raw.v1` | Replay Producer가 발행하는 표준 이벤트 | `user_id` | 표준 이벤트 | 7일 | Spark 장애 시 Kafka에서 단기 재처리가 가능해야 한다. |
+| `ecommerce.raw-events` | Phase 2 Replay Producer가 발행하는 표준 이벤트 | `user_id` | JSON 표준 이벤트 | 7일 | 로컬 Kafka ingestion 경로를 단순하게 검증하고 Spark raw input으로 확장할 수 있어야 한다. |
+| `ecommerce.events.raw.v1` | 운영 이름 규칙을 적용한 raw topic 후보 | `user_id` | 표준 이벤트 | 7일 | Schema Registry와 Spark 운영 전환 시 versioned topic 계약이 필요하다. |
 | `ecommerce.events.retry.v1` | 일시적 처리 실패 재시도 이벤트 | `user_id` | retry envelope | 3일 | raw와 재시도를 분리해 정상 stream 오염을 막는다. |
 | `ecommerce.events.dlq.v1` | 잘못되었거나 복구 불가능한 이벤트 | 가능하면 `event_id` | DLQ envelope | 30일 | 장애 분석은 시간이 걸리므로 raw보다 긴 보존이 필요하다. |
 | `ecommerce.quality.metrics.v1` | 품질 규칙 결과와 metric event | `rule_id` | quality metric event | 30일 | 품질 상태를 streaming으로 dashboard에 연결한다. |
@@ -28,11 +29,14 @@ Kafka 계층은 replay producer와 Spark processing 사이에서 내구성 있�
 
 Raw와 retry topic은 기본적으로 `user_id`를 사용한다.
 
+Phase 2 로컬 topic partition count는 3으로 둔다.
+
 결정 이유:
 
 - `view -> cart -> purchase` funnel은 사용자별 순서가 중요하다.
 - 특정 유저의 짧은 시간 내 purchase burst를 탐지하려면 같은 사용자의 이벤트가 같은 partition에 모이는 것이 유리하다.
 - `product_id`나 `category_code`로 partition하면 카테고리 집계에는 유리하지만 사용자 행동 흐름이 분산된다.
+- 로컬 개발에서는 3개 partition으로도 ordering, consumer group, lag 관찰을 검증할 수 있고 단일 브로커 KRaft 환경의 운영 부담이 작다.
 
 예외:
 
@@ -62,6 +66,7 @@ Replay Producer는 다음 계약을 따른다.
 
 | Consumer Group | 목적 | Offset 전략 | 결정 이유 |
 | --- | --- | --- | --- |
+| `ecommerce-postgres-writer` | Phase 2 raw topic을 PostgreSQL `ecommerce.raw_events`에 적재 | PostgreSQL commit 후 offset commit | Replay Producer와 저장 책임을 분리하고 at-least-once 처리를 검증한다. |
 | `spark-bronze-ingest` | Raw topic에서 Bronze 수집 | Bronze durable write 후 commit | Kafka message 손실 없이 재시작해야 한다. |
 | `spark-silver-quality` | Silver validation과 품질 상태 생성 | Silver/quarantine write 후 commit | 품질 실패도 처리 결과로 남겨야 한다. |
 | `spark-gold-aggregation` | Gold 집계 생성 | Gold write/checkpoint 완료 후 commit | dashboard 지표 중복과 누락을 줄인다. |
@@ -133,10 +138,10 @@ DLQ envelope:
 
 | Phase | 적용 내용 | 결정 이유 |
 | --- | --- | --- |
-| Phase 1 | Topic, key, consumer group, DLQ 계약 문서화 | 구현 전 producer와 consumer 사이의 계약을 고정한다. |
-| Phase 2 | Replay Producer가 raw topic 계약을 따르도록 설계 | CSV replay를 실제 streaming input으로 전환한다. |
-| Phase 3 | Kafka topic 생성, producer/consumer 설정, retry/DLQ 설계 확정 | 스트리밍 기반의 신뢰성을 검증한다. |
-| Phase 4 | Spark consumer group과 checkpoint/offset 정책 연결 | 처리 장애 후 재시작과 재처리를 안정화한다. |
+| Phase 1 | PostgreSQL 직접 적재로 스키마와 replay semantics 검증 | Kafka 도입 전 원천 파싱과 저장 계약을 작게 확인한다. |
+| Phase 2 | KRaft Kafka, `ecommerce.raw-events`, producer, consumer 구현 | CSV replay를 실제 streaming input으로 전환한다. |
+| Phase 3 | Spark consumer group과 checkpoint/offset 정책 연결 | 처리 장애 후 재시작과 재처리를 안정화한다. |
+| Phase 4 | retry/DLQ topic과 품질 실패 처리 연결 | 실패 유형별 재처리와 격리를 검증한다. |
 | Phase 5 | consumer lag, DLQ count, throughput metric을 dashboard와 alert로 연결 | 운영 가능한 플랫폼인지 판단할 수 있다. |
 
 ## 운영 규칙
@@ -145,4 +150,3 @@ DLQ envelope:
 - Topic 변경은 schema, replay, Spark, data quality, monitoring 문서 변경과 함께 수행한다.
 - Partition count 변경은 ordering과 key skew 영향을 검토한 뒤 진행한다.
 - DLQ replay는 원본 payload와 실패 metadata를 유지해야 한다.
-
