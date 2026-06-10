@@ -4,7 +4,7 @@
 
 이 문서는 Kaggle `E-commerce behavior data from multi category store` CSV 데이터를 실시간 이벤트처럼 재생하여 수집, 전처리, 저장, 집계, 시각화까지 이어지는 데이터 플랫폼의 Phase 1~5 설계를 정의한다.
 
-현재 작업 범위는 설계 문서 작성이다. 애플리케이션 코드, 인프라 코드, Spark job, Kafka producer/consumer 구현은 포함하지 않는다.
+현재 구현 범위는 Phase 3 Spark processing이다. 로컬 개발 환경에서는 `2019-Oct.csv`를 replay generator로 읽어 Kafka raw topic에 발행하고, Spark Structured Streaming이 Bronze/Silver/Gold Parquet 계층을 생성한다.
 
 ## 분석 목표
 
@@ -16,22 +16,22 @@
 
 | Phase | 목표 | 주요 산출물 |
 | --- | --- | --- |
-| Phase 1 | 하네스와 설계 확정 | 문서, 스키마 계약, 검증 기준 |
-| Phase 2 | CSV 이벤트 재생 설계와 로컬 재생 준비 | Replay contract, fault scenario, replay metadata |
-| Phase 3 | Kafka 스트리밍 기반 설계 | Topic, partition key, consumer group, retry, DLQ |
-| Phase 4 | Spark Structured Streaming 처리 설계 | Bronze/Silver/Gold, watermark, checkpoint, window aggregation |
-| Phase 5 | 데이터 품질과 관측성 설계 | 품질 규칙, 지표, 알림, 대시보드 연결 |
+| Phase 1 | CSV replay와 PostgreSQL 로컬 적재 | Replay generator, raw event table, 100건 적재 검증 |
+| Phase 2 | Kafka ingestion 경로 도입 | KRaft Kafka, raw topic, producer, consumer, PostgreSQL 적재 검증 |
+| Phase 3 | Spark Structured Streaming 처리 | Bronze/Silver/Gold, watermark, checkpoint, window aggregation |
+| Phase 4 | 데이터 품질과 장애 격리 | 품질 규칙, quarantine, DLQ, retry 정책 |
+| Phase 5 | 운영 관측성과 대시보드 | 지표, 알림, Grafana dashboard, 운영 runbook |
 
 ## 전체 흐름
 
 ```text
 Kaggle CSV
   -> Event Replay Producer
-  -> ecommerce.events.raw.v1
+  -> Kafka ecommerce.raw-events
   -> Spark Bronze: raw event 보존
   -> Spark Silver: schema validation, normalization, deduplication
   -> Spark Gold: order volume, category volume, funnel, anomaly feature
-  -> Storage tables
+  -> PostgreSQL/Serving tables
   -> Grafana dashboards and alerts
 ```
 
@@ -72,10 +72,10 @@ Kaggle CSV
 
 | Phase | 적용 범위 | 설계 이유 |
 | --- | --- | --- |
-| Phase 1 | 문서와 검증 스크립트로 계약을 고정한다. | 구현 전에 schema, replay, Kafka, Spark 계약을 맞춰야 나중에 재작업을 줄인다. |
-| Phase 2 | CSV replay는 Kafka producer 역할만 수행하고 분석 계산을 하지 않는다. | replay와 processing 책임을 분리해야 fault injection과 downstream 검증이 명확하다. |
-| Phase 3 | Kafka는 raw, retry, DLQ topic을 분리한다. | 실패 유형별 보존 기간과 소비자를 다르게 운영할 수 있다. |
-| Phase 4 | Spark는 Bronze부터 Gold까지 event-time streaming query로 처리한다. | processing-time 기반 지표 왜곡을 피하고 replay 속도와 무관한 결과를 얻는다. |
+| Phase 1 | CSV replay 결과를 PostgreSQL에 직접 저장해 스키마와 event-time 변환을 검증한다. | Kafka 도입 전 원천 파싱, KST 파생 필드, `event_id` 생성 규칙을 작게 고정한다. |
+| Phase 2 | CSV replay producer는 Kafka에만 발행하고, consumer가 PostgreSQL에 저장한다. | replay, broker, storage writer 책임을 분리해 이후 Spark consumer로 자연스럽게 확장한다. |
+| Phase 3 | Spark는 Kafka raw topic에서 Bronze부터 Gold까지 event-time streaming query로 처리한다. | processing-time 기반 지표 왜곡을 피하고 replay 속도와 무관한 결과를 얻는다. |
+| Phase 4 | 품질 실패를 quarantine, retry, DLQ 경로로 분리한다. | 실패 유형별 보존 기간과 운영 절차를 다르게 가져갈 수 있다. |
 | Phase 5 | 데이터 품질 지표와 운영 지표를 dashboard와 alert로 연결한다. | 파이프라인의 핵심은 모델보다 신뢰성 있는 운영이므로 이상 징후를 가시화해야 한다. |
 
 ## 에이전트별 설계 책임
@@ -89,8 +89,7 @@ Kaggle CSV
 
 ## 미결정 사항
 
-- Kafka partition count는 실제 replay throughput profiling 이후 결정한다.
+- Phase 2 로컬 Kafka raw topic partition count는 3으로 둔다. 운영 partition count는 실제 replay throughput profiling 이후 재검토한다.
 - Watermark 기본값은 30분으로 시작하되 out-of-order 분포 측정 후 조정한다.
 - 저장 포맷은 Delta Lake 또는 Iceberg 중 local/dev 환경과 운영 목표를 비교해 결정한다.
 - Grafana dashboard와 alert threshold는 Phase 5 load test 이후 baseline 기반으로 확정한다.
-

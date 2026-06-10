@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import json
 import os
 import time
 import uuid
@@ -16,6 +17,7 @@ from typing import Iterator
 KST = timezone(timedelta(hours=9))
 DEFAULT_SCHEMA_VERSION = "raw-event-v1"
 DEFAULT_DATABASE_URL = "postgresql://ecommerce:ecommerce@localhost:5432/ecommerce"
+DEFAULT_KAFKA_TOPIC = "ecommerce.raw-events"
 VALID_EVENT_TYPES = {"view", "cart", "purchase"}
 
 
@@ -156,6 +158,59 @@ def raw_event_from_row(
     )
 
 
+def raw_event_to_payload(event: RawEvent) -> dict[str, object]:
+    return {
+        "replay_sequence": event.replay_sequence,
+        "event_id": event.event_id,
+        "event_time": event.event_time.isoformat(),
+        "event_time_kst": event.event_time_kst.isoformat(),
+        "event_date_kst": event.event_date_kst,
+        "event_hour_kst": event.event_hour_kst,
+        "event_type": event.event_type,
+        "product_id": event.product_id,
+        "category_id": event.category_id,
+        "category_code": event.category_code,
+        "brand": event.brand,
+        "price": str(event.price) if event.price is not None else None,
+        "user_id": event.user_id,
+        "user_session": event.user_session,
+        "source_file": event.source_file,
+        "source_row_number": event.source_row_number,
+        "replay_run_id": event.replay_run_id,
+        "schema_version": event.schema_version,
+        "ingested_at": event.ingested_at.isoformat(),
+    }
+
+
+def raw_event_to_json(event: RawEvent) -> str:
+    return json.dumps(raw_event_to_payload(event), ensure_ascii=False, separators=(",", ":"))
+
+
+def raw_event_from_payload(payload: dict[str, object]) -> RawEvent:
+    price = payload.get("price")
+    return RawEvent(
+        replay_sequence=int(payload["replay_sequence"]),
+        event_id=str(payload["event_id"]),
+        event_time=parse_event_time(str(payload["event_time"])),
+        event_time_kst=parse_event_time(str(payload["event_time_kst"])).astimezone(KST),
+        event_date_kst=str(payload["event_date_kst"]),
+        event_hour_kst=int(payload["event_hour_kst"]),
+        event_type=str(payload["event_type"]),
+        product_id=int(payload["product_id"]),
+        category_id=parse_optional_int(str(payload["category_id"])) if payload.get("category_id") is not None else None,
+        category_code=parse_optional_text(str(payload["category_code"])) if payload.get("category_code") is not None else None,
+        brand=parse_optional_text(str(payload["brand"])) if payload.get("brand") is not None else None,
+        price=Decimal(str(price)) if price is not None else None,
+        user_id=int(payload["user_id"]),
+        user_session=parse_optional_text(str(payload["user_session"])) if payload.get("user_session") is not None else None,
+        source_file=str(payload["source_file"]),
+        source_row_number=int(payload["source_row_number"]),
+        replay_run_id=str(payload["replay_run_id"]),
+        schema_version=str(payload["schema_version"]),
+        ingested_at=parse_event_time(str(payload["ingested_at"])),
+    )
+
+
 def iter_raw_events(
     csv_path: Path,
     *,
@@ -276,6 +331,38 @@ class PostgresEventSink:
             )
         self._connection.commit()
 
+    def ensure_replay_run(
+        self,
+        *,
+        replay_run_id: str,
+        source_file: str,
+        schema_version: str,
+        replay_speed: str,
+    ) -> None:
+        with self._connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO ecommerce.replay_runs (
+                    replay_run_id,
+                    source_file,
+                    schema_version,
+                    replay_speed,
+                    started_at,
+                    status
+                )
+                VALUES (%s, %s, %s, %s, %s, 'consuming')
+                ON CONFLICT (replay_run_id) DO NOTHING
+                """,
+                (
+                    replay_run_id,
+                    source_file,
+                    schema_version,
+                    replay_speed,
+                    datetime.now(timezone.utc),
+                ),
+            )
+        self._connection.commit()
+
     def insert_event(self, event: RawEvent) -> None:
         with self._connection.cursor() as cursor:
             cursor.execute(
@@ -304,6 +391,7 @@ class PostgresEventSink:
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
+                ON CONFLICT (replay_run_id, event_id) DO NOTHING
                 """,
                 (
                     event.event_id,

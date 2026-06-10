@@ -4,7 +4,7 @@
 
 Kaggle `E-commerce behavior data from multi category store`의 `2019-Oct.csv` 행을 실시간 사용자 행동 이벤트처럼 재생하면서 원천 `event_time` 의미를 보존한다. Event Replay Agent의 책임은 데이터를 분석하거나 집계하는 것이 아니라, downstream Kafka/Spark 파이프라인을 검증할 수 있는 신뢰 가능한 이벤트 입력을 만드는 것이다.
 
-현재 단계는 문서 설계만 수행한다. CSV producer, Kafka client, Spark job 같은 애플리케이션 런타임 코드는 별도 요청 전까지 작성하지 않는다.
+현재 Phase 2 구현에서는 CSV producer가 Kafka `ecommerce.raw-events` topic에 JSON 이벤트를 발행하고, 별도 consumer가 PostgreSQL에 저장한다. Spark job, DLQ, retry, Schema Registry, Airflow, Grafana는 이번 단계에 포함하지 않는다.
 
 ## 핵심 설계 결정
 
@@ -20,7 +20,7 @@ Kaggle `E-commerce behavior data from multi category store`의 `2019-Oct.csv` �
 ## 재생 입력
 
 - Source: `2019-Oct.csv` 파일 경로 또는 source manifest
-- Target topic: `ecommerce.events.raw.v1`
+- Target topic: `ecommerce.raw-events`
 - Audit topic: `ecommerce.replay.audit.v1`
 - Replay profile: `1x`, `10x`, `100x`, `1000x`, `max`
 - 선택 가능한 시작/종료 `event_time`
