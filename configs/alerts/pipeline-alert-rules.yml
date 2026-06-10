@@ -1,0 +1,40 @@
+groups:
+  - name: ecommerce-event-pipeline
+    interval: 30s
+    rules:
+      - alert: DataQualityRejectFailures
+        expr: sum(dq_schema_required_failures_total) > 0
+        for: 1m
+        labels:
+          severity: critical
+          owner: data-platform
+        annotations:
+          summary: Reject-level data quality failures detected.
+          runbook: docs/data-pipeline/data-quality-rules.md
+      - alert: QuarantineGrowthHigh
+        expr: sum(dq_price_negative_total) > 0 or sum(dq_conversion_rate_range_total) > 0
+        for: 5m
+        labels:
+          severity: warning
+          owner: data-platform
+        annotations:
+          summary: Quarantine-level records require triage.
+          runbook: docs/data-pipeline/data-quality-rules.md
+      - alert: DuplicateRateHigh
+        expr: max(dq_duplicate_event_rate) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          owner: data-platform
+        annotations:
+          summary: Duplicate event rate is above the Phase 5 smoke threshold.
+          runbook: docs/data-pipeline/monitoring-guide.md
+      - alert: PurchaseSpikeDetected
+        expr: sum(business_purchase_count) >= 1000
+        for: 1m
+        labels:
+          severity: warning
+          owner: data-platform
+        annotations:
+          summary: Purchase count exceeds the local replay spike threshold.
+          runbook: docs/data-pipeline/monitoring-guide.md

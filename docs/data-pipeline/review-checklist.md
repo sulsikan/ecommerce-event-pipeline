@@ -56,4 +56,4 @@ python3 scripts/generate-pipeline-report.py
 - [ ] Watermark 기간 미확정
 - [ ] Storage format 미확정
 - [ ] Grafana 배포 경로 미확정
-
+- [ ] Phase 5 alert threshold는 smoke test 기준이며 운영 baseline 조정 전이다.

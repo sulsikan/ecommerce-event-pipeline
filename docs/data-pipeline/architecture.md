@@ -4,7 +4,7 @@
 
 이 문서는 Kaggle `E-commerce behavior data from multi category store` CSV 데이터를 실시간 이벤트처럼 재생하여 수집, 전처리, 저장, 집계, 시각화까지 이어지는 데이터 플랫폼의 Phase 1~5 설계를 정의한다.
 
-현재 구현 범위는 Phase 4 Spark Structured Streaming 처리다. 로컬 개발 환경에서는 `2019-Oct.csv`를 replay generator로 읽어 Kafka raw topic에 발행하고, Spark Structured Streaming이 Bronze/Silver/Gold Parquet 계층을 생성한다.
+현재 구현 범위는 Phase 5 데이터 품질과 모니터링이다. 로컬 개발 환경에서는 `2019-Oct.csv`를 replay generator로 읽어 Kafka raw topic에 발행하고, Spark Structured Streaming이 Bronze/Silver/Gold Parquet 계층을 생성한 뒤, 품질 규칙과 모니터링 리포트를 생성한다.
 
 ## 분석 목표
 
@@ -31,8 +31,8 @@ Kaggle CSV
   -> Spark Bronze: raw event 보존
   -> Spark Silver: schema validation, normalization, deduplication
   -> Spark Gold: order volume, category volume, funnel, anomaly feature
-  -> PostgreSQL/Serving tables
-  -> Grafana dashboards and alerts
+  -> Data Quality: rule_results, quarantine_events
+  -> Monitoring: metric_events, report, Grafana dashboard and alerts
 ```
 
 ## 핵심 설계 결정
@@ -77,6 +77,17 @@ Kaggle CSV
 | Phase 3 | Kafka ingestion 경로를 안정화하고 PostgreSQL 적재 smoke test를 수행한다. | replay, broker, storage writer 책임을 검증한다. |
 | Phase 4 | Spark는 Kafka raw topic에서 Bronze부터 Gold까지 event-time streaming query로 처리한다. | processing-time 기반 지표 왜곡을 피하고 replay 속도와 무관한 결과를 얻는다. |
 | Phase 5 | 데이터 품질 지표와 운영 지표를 dashboard와 alert로 연결한다. | 파이프라인의 핵심은 모델보다 신뢰성 있는 운영이므로 이상 징후를 가시화해야 한다. |
+
+## Phase 5 산출물
+
+| 산출물 | 경로 | 목적 |
+| --- | --- | --- |
+| 품질 규칙 결과 | `data/quality-monitoring/data_quality/rule_results` | rule별 failure count, severity, status 보존 |
+| Quarantine 후보 | `data/quality-monitoring/data_quality/quarantine_events` | reject/quarantine 대상 원본 payload와 실패 metadata 보존 |
+| Metric event | `data/quality-monitoring/monitoring/metric_events` | Prometheus 변환 가능한 운영 지표 저장 |
+| Monitoring report | `data/quality-monitoring/monitoring/phase5-report.json` | alert firing 상태와 품질 요약 제공 |
+| Grafana dashboard | `configs/grafana/ecommerce-pipeline-dashboard.json` | dashboard import 계약 |
+| Alert rule | `configs/alerts/pipeline-alert-rules.yml` | severity, owner, runbook 포함 alert 계약 |
 
 ## 에이전트별 설계 책임
 

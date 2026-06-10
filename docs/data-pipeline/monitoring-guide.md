@@ -60,10 +60,36 @@ Dashboard section:
 - 데이터 품질: null count, duplicate count, schema failure, quarantine count
 - 비즈니스 지표: 시간대별 purchase count, 카테고리별 purchase count, conversion funnel, purchase burst user
 
+## Phase 5 구현
+
+모니터링 리포트는 데이터 품질 산출물을 읽어 JSON report와 Prometheus textfile 형식 metric을 생성한다.
+
+```bash
+docker compose exec spark \
+  /opt/spark/bin/spark-submit \
+  /workspace/scripts/generate-monitoring-report.py \
+  --output-dir /workspace/data/quality-monitoring \
+  --report-path /workspace/data/quality-monitoring/monitoring/phase5-report.json \
+  --prometheus-path /workspace/data/quality-monitoring/monitoring/prometheus-metrics.prom
+```
+
+구성 파일:
+
+| 파일 | 목적 |
+| --- | --- |
+| `configs/grafana/ecommerce-pipeline-dashboard.json` | Grafana import용 dashboard 정의 |
+| `configs/alerts/pipeline-alert-rules.yml` | Prometheus/Grafana 호환 alert rule 초안 |
+
+Phase 5 smoke test alert:
+
+- `DataQualityRejectFailures`
+- `QuarantineGrowthHigh`
+- `DuplicateRateHigh`
+- `PurchaseSpikeDetected`
+
 ## 리뷰 요구사항
 
 - 모든 critical alert에는 owner와 runbook이 있어야 한다.
 - 모든 reject 또는 quarantine 품질 규칙은 metric을 방출해야 한다.
 - Dashboard는 event-time metric과 processing-time metric을 구분해야 한다.
 - Alert threshold는 replay load test 이후 재검토해야 한다.
-

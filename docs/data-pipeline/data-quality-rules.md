@@ -63,3 +63,26 @@
 - observe 규칙은 metric만 방출한다.
 - 모든 실패 record에는 `rule_id`, `severity`, `event_id`, `detected_at`, `failed_stage`를 포함한다.
 
+## Phase 5 구현
+
+Phase 5 로컬 구현은 Spark warehouse를 읽어 다음 산출물을 생성한다.
+
+```bash
+docker compose exec spark \
+  /opt/spark/bin/spark-submit \
+  /workspace/scripts/run-data-quality-checks.py \
+  --warehouse-dir /workspace/data/spark-warehouse \
+  --output-dir /workspace/data/quality-monitoring
+```
+
+| 산출물 | 설명 |
+| --- | --- |
+| `data_quality/rule_results` | `rule_id`, `severity`, `failed_stage`, `metric_name`, `failure_count`, `status` |
+| `data_quality/quarantine_events` | reject/quarantine 대상 record, Kafka metadata, 원본 payload, 실패 사유 |
+| `monitoring/metric_events` | 품질/비즈니스/파이프라인 metric event |
+
+초기 구현 규칙:
+
+- `DQ_SCHEMA_REQUIRED`, `DQ_EVENT_TYPE_ENUM`, `DQ_NULL_EVENT_TIME`, `DQ_NULL_USER_ID`, `DQ_NULL_PRODUCT_ID`
+- `DQ_NULL_CATEGORY_CODE`, `DQ_DUP_EVENT_ID`, `DQ_PRICE_NEGATIVE`, `DQ_PURCHASE_PRICE_NULL`
+- `DQ_CONVERSION_DENOMINATOR_ZERO`, `DQ_CONVERSION_RATE_RANGE`
