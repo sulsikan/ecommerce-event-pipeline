@@ -29,7 +29,7 @@ Kaggle `E-commerce behavior data from multi category store`의 `2019-Oct.csv`를
 - 비즈니스 partition과 dashboard grouping은 KST 파생 필드인 `event_time_kst`, `event_date_kst`, `event_hour_kst`, `metric_date_kst`, `metric_hour_kst`를 사용한다.
 - 결정적 `event_id`를 replay, Kafka retry, Spark deduplication, 품질 규칙의 공통 식별자로 사용한다.
 - Kafka raw topic partition key는 `user_id`로 둔다.
-- Raw topic은 `ecommerce.events.raw.v1`, retry topic은 `ecommerce.events.retry.v1`, DLQ topic은 `ecommerce.events.dlq.v1`를 사용한다.
+- Phase 2~3 로컬 raw topic은 `ecommerce.raw-events`를 사용한다. 운영 전환 시 versioned topic 이름 후보는 `ecommerce.events.raw.v1`이다.
 - Spark는 Bronze, Silver, Gold 계층을 분리한다.
 - Silver는 `event_id` 기준 deduplication과 `event_time` 기준 초기 30분 watermark를 사용한다.
 - 품질 실패는 severity에 따라 reject, quarantine, warn, observe로 분리한다.
@@ -108,68 +108,66 @@ python3 scripts/generate-pipeline-report.py
 작업:
 
 1. Kafka topic을 생성한다.
-2. Replay producer가 `ecommerce.events.raw.v1`에 `user_id` key로 publish하도록 연결한다.
-3. retry topic과 DLQ topic envelope를 구현한다.
-4. Spark consumer group, monitoring consumer group, DLQ triage worker group을 정의한다.
-5. offset commit 정책과 장애 복구 절차를 구현한다.
-6. replay audit topic 또는 audit storage를 연결한다.
+2. Replay producer가 `ecommerce.raw-events`에 `user_id` key로 publish하도록 연결한다.
+3. Kafka consumer가 raw topic을 구독해 PostgreSQL `ecommerce.raw_events`에 저장한다.
+4. consumer group과 offset 처리 정책을 정의한다.
+5. 로컬 smoke test로 Kafka 발행 건수, consumer 처리 건수, PostgreSQL 적재 건수를 확인한다.
 
 예상 산출물:
 
-- Kafka topic 생성 스크립트 또는 운영 절차
+- Kafka KRaft Docker Compose 구성
 - Producer publish contract
-- Consumer group 목록
-- Retry/DLQ envelope contract
-- Offset recovery runbook
+- Consumer group 기반 PostgreSQL writer
+- Kafka topic 검증 스크립트
+- Kafka ingestion 실행 가이드
 
 완료 기준:
 
-- raw, retry, DLQ topic이 목적별로 분리된다.
+- raw topic이 목적에 맞게 생성된다.
 - raw topic key가 `user_id`로 설정된다.
-- Consumer는 durable write 이후 offset commit 원칙을 따른다.
-- DLQ record가 원본 payload와 실패 metadata를 보존한다.
+- Consumer는 durable write 이후 처리 완료로 간주한다.
+- Replay producer 100건 발행 후 PostgreSQL 적재 건수를 확인할 수 있다.
 
 검증 방법:
 
-- Replay producer로 raw topic에 sample event를 publish한다.
-- Consumer lag metric을 확인한다.
-- malformed event가 DLQ 또는 quarantine 경로로 이동하는지 확인한다.
-- consumer restart 후 중복 또는 누락 없이 재처리되는지 확인한다.
+- Replay producer로 raw topic에 100건 sample event를 publish한다.
+- Kafka topic offset과 message count를 확인한다.
+- Consumer 실행 후 PostgreSQL row count를 확인한다.
+- consumer restart 후 중복 또는 누락 가능성을 자체 리뷰한다.
 
 ### Phase 4: Spark Structured Streaming 처리 구현
 
 작업:
 
-1. Bronze ingestion query를 구현한다.
-2. Silver parsing, validation, normalization, KST 파생, deduplication을 구현한다.
-3. watermark와 checkpoint를 query별로 설정한다.
-4. Gold metric query를 구현한다.
-5. late event, duplicate event, malformed event 처리 결과를 품질 지표와 연결한다.
-6. backfill과 replay recovery 절차를 정의한다.
+1. Spark Structured Streaming job을 구현한다.
+2. Kafka `ecommerce.raw-events`를 읽어 Bronze raw event 계층을 생성한다.
+3. Bronze에서 Silver 표준 이벤트를 파싱, 검증, 정규화한다.
+4. Silver에서 `event_id` 기준 deduplication과 `event_time` watermark를 적용한다.
+5. Gold 주문량, 카테고리 주문량, funnel, 사용자 구매 폭증 feature, 중복 이벤트 요약 집계를 생성한다.
+6. query별 checkpoint와 로컬 Parquet warehouse 경로를 분리한다.
 
 예상 산출물:
 
-- Bronze table
-- Silver table
-- Gold metric tables
+- Spark Structured Streaming job
+- Bronze/Silver/Gold Parquet output
 - Query별 checkpoint directory
-- Streaming query configuration
-- Backfill/recovery runbook
+- Spark 실행 가이드
+- Spark output 검증 스크립트
 
 완료 기준:
 
-- Bronze가 raw payload와 Kafka metadata를 보존한다.
-- Silver가 `event_id` 기준 deduplication을 수행한다.
-- Gold가 주문량, 카테고리 주문량, funnel 전환율, user purchase burst, duplicate summary metric을 생성한다.
+- Bronze가 Kafka metadata와 raw payload를 보존한다.
+- Silver가 필수 schema validation, KST 파생, `event_id` deduplication을 수행한다.
+- Gold가 시간대별 주문량, 카테고리 주문량, funnel 전환율, 사용자 구매 폭증 feature, 중복 이벤트 요약을 생성한다.
 - 모든 query가 독립 checkpoint를 가진다.
-- watermark 초과 late event 처리 정책이 문서와 일치한다.
+- Spark job은 `available-now` trigger로 100건 smoke test를 재현할 수 있다.
 
 검증 방법:
 
-- duplicate fault scenario에서 Gold 중복 지표가 증가하고 핵심 metric은 중복 제거 결과를 사용한다.
-- late event scenario에서 watermark 이내/초과 동작을 구분해 확인한다.
-- Gold metric row의 `metric_date_kst`, `window_start_kst`, dimension key가 기대값과 일치하는지 확인한다.
-- checkpoint 삭제 없이 restart가 가능한지 확인한다.
+- Replay producer로 raw topic에 100건 sample event를 publish한다.
+- Spark `available-now` trigger로 Bronze/Silver/Gold output을 생성한다.
+- Bronze/Silver row count와 Gold metric row 존재 여부를 확인한다.
+- checkpoint 삭제 없이 같은 query를 재실행했을 때 이미 처리한 Kafka offset이 중복 처리되지 않는지 확인한다.
 
 ### Phase 5: 데이터 품질과 모니터링 구현
 
@@ -177,9 +175,11 @@ python3 scripts/generate-pipeline-report.py
 
 1. 스키마, null, duplicate, range, referential integrity, conversion metric 검증 규칙을 구현한다.
 2. reject, quarantine, warn, observe severity별 처리 경로를 구현한다.
-3. replay, Kafka, Spark, data quality, Gold metric 지표를 수집한다.
-4. Grafana dashboard와 alert rule을 구성한다.
-5. purchase spike, consumer lag, DLQ growth, duplicate rate, data latency alert를 검증한다.
+3. retry topic과 DLQ topic envelope를 구현한다.
+4. malformed, late, duplicate event 처리 결과를 품질 지표와 연결한다.
+5. replay, Kafka, Spark, data quality, Gold metric 지표를 수집한다.
+6. Grafana dashboard와 alert rule을 구성한다.
+7. purchase spike, consumer lag, DLQ growth, duplicate rate, data latency alert를 검증한다.
 
 예상 산출물:
 

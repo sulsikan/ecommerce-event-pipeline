@@ -60,5 +60,22 @@ services:
           --partitions 3 \
           --replication-factor 1
 
+  spark:
+    image: apache/spark:3.5.8-python3
+    container_name: ecommerce-event-spark
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      HOME: /tmp
+      SPARK_LOCAL_IP: spark
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    command:
+      - /bin/bash
+      - -lc
+      - sleep infinity
+
 volumes:
   postgres-data:

@@ -245,6 +245,6 @@ Gold 목적별 table 후보는 다음과 같다.
 | --- | --- | --- |
 | Phase 1 | 문서상 schema contract와 validation 기준 확정 | 구현 전 공통 언어를 고정한다. |
 | Phase 2 | replay payload가 표준 이벤트 스키마를 따르게 설계 | producer와 downstream 연결 실패를 줄인다. |
-| Phase 3 | Kafka key/value schema와 DLQ envelope에 스키마 버전 포함 | consumer 호환성과 장애 triage가 쉬워진다. |
-| Phase 4 | Spark Bronze/Silver/Gold schema를 분리 | raw 보존, 검증, 집계 책임을 분리한다. |
+| Phase 3 | Spark Bronze/Silver/Gold schema를 구현 | raw 보존, 검증, 집계 책임을 분리한다. |
+| Phase 4 | Kafka retry/DLQ envelope와 품질 실패 schema를 연결 | consumer 호환성과 장애 triage가 쉬워진다. |
 | Phase 5 | 품질 지표와 dashboard dimension을 schema field와 연결 | 운영 관측성과 분석 지표가 같은 계약을 사용한다. |
