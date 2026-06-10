@@ -17,7 +17,7 @@ Spark Structured Streaming은 Kafka raw event를 읽어 Bronze, Silver, Gold 계
 ## 처리 모델
 
 ```text
-Kafka ecommerce.events.raw.v1
+Kafka ecommerce.raw-events
   -> Bronze query: raw payload + Kafka metadata 저장
   -> Silver query: parse, schema validation, normalization, deduplication
   -> Gold queries:
@@ -173,8 +173,7 @@ Gold table은 dashboard와 anomaly feature를 위한 목적별 aggregate로 둔�
 | Phase | 적용 내용 | 결정 이유 |
 | --- | --- | --- |
 | Phase 1 | Bronze/Silver/Gold 계약, watermark, checkpoint 정책 문서화 | 구현 전 처리 계층 책임을 고정한다. |
-| Phase 2 | replay fixture와 fault scenario로 Spark 입력 기대값 정의 | Spark job 구현 전 테스트 입력을 명확히 한다. |
-| Phase 3 | Kafka consumer group과 offset/checkpoint 정책 연결 | Spark 장애 복구가 Kafka 설계와 충돌하지 않게 한다. |
-| Phase 4 | Structured Streaming job과 Gold aggregate 구현 설계 확정 | 실제 분석 목표를 지원하는 streaming 처리 흐름을 만든다. |
+| Phase 2 | Kafka raw topic과 replay fixture로 Spark 입력 기대값 정의 | Spark job 구현 전 테스트 입력을 명확히 한다. |
+| Phase 3 | Kafka ingestion 경로와 Spark 입력 topic 계약 확정 | Spark 장애 복구가 Kafka 설계와 충돌하지 않게 한다. |
+| Phase 4 | Structured Streaming job과 Gold aggregate 구현 | 실제 분석 목표를 지원하는 streaming 처리 흐름을 만든다. |
 | Phase 5 | 처리량, 지연, duplicate, late event metric을 monitoring에 연결 | 운영 가능한 데이터 플랫폼인지 검증한다. |
-
